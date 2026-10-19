@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>打字大廚：美食餐廳經營學 Typing Chef</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, "微軟正黑體"; }
+        body { background: linear-gradient(135deg, #fef6e4 0%, #f3d2ac 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #001e1d; padding: 15px; }
+        
+        .game-container { width: 900px; max-width: 100%; background: #ffffff; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); overflow: hidden; border: 4px solid #f2545b; position: relative; }
+        
+        /* Top Navigation Bar */
+        .top-bar { background: #f2545b; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .currency-group { display: flex; gap: 15px; background: rgba(0,0,0,0.15); padding: 5px 15px; border-radius: 20px; font-size: 0.95rem; }
+        .btn-nav { background: #fff; color: #f2545b; border: none; padding: 6px 14px; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+
+        /* Screen Management */
+        .screen { display: none; padding: 25px; min-height: 520px; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+        .screen.active { display: flex !important; }
+
+        /* Menu Screen */
+        .game-title { font-size: 2.2rem; color: #f2545b; margin-bottom: 5px; text-shadow: 1px 1px 0px #fff; text-align: center; }
+        .game-subtitle { color: #8c7851; margin-bottom: 25px; font-size: 1rem; }
+        .menu-buttons { display: flex; flex-direction: column; gap: 15px; width: 280px; z-index: 10; }
+        .btn-main { background: #ffb703; color: #001e1d; border: 3px solid #fb8500; padding: 14px; border-radius: 15px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-align: center; width: 100%; display: block; text-decoration: none; }
+        .btn-main:hover { background: #fb8500; color: white; }
+
+        /* Map Screen */
+        .map-title { font-size: 1.5rem; color: #001e1d; margin-bottom: 15px; font-weight: bold; }
+        .map-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; width: 100%; margin-bottom: 20px; }
+        .map-card { background: #fff8f0; border: 2px solid #e0c9a6; border-radius: 12px; padding: 15px 10px; text-align: center; cursor: pointer; position: relative; }
+        .map-card.unlocked:hover { border-color: #f2545b; background: #ffe8e8; }
+        .map-card.locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.8); }
+        .map-card .icon { font-size: 2.2rem; margin-bottom: 8px; }
+        .map-card .name { font-size: 0.95rem; font-weight: bold; color: #001e1d; }
+        .map-card .stars { color: #ffb703; font-size: 0.8rem; margin-top: 5px; }
+
+        /* Gameplay Area */
+        .game-header { width: 100%; display: flex; justify-content: space-between; margin-bottom: 15px; background: #fff8f0; padding: 10px 18px; border-radius: 12px; border: 1px solid #e0c9a6; }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 0.75rem; color: #8c7851; }
+        .stat-value { font-size: 1.2rem; font-weight: bold; color: #f2545b; }
+
+        .customer-area { width: 100%; height: 160px; background: #eef5db; border-radius: 15px; display: flex; align-items: center; justify-content: space-around; position: relative; border: 2px dashed #b8c480; margin-bottom: 10px; padding: 0 20px; }
+        .customer-avatar { font-size: 4.5rem; }
+
+        .order-bubble { background: white; padding: 12px 25px; border-radius: 20px; border: 3px solid #ffb703; position: relative; box-shadow: 0 5px 10px rgba(0,0,0,0.05); text-align: center; }
+        .order-bubble::before { content: ''; position: absolute; left: -12px; top: 50%; transform: translateY(-50%); border-width: 8px 12px 8px 0; border-style: solid; border-color: transparent white transparent transparent; }
+        .food-name { font-size: 0.85rem; color: #8c7851; margin-bottom: 3px; font-weight: bold; }
+        .target-word { font-size: 2rem; font-weight: bold; letter-spacing: 3px; color: #001e1d; }
+        .target-word .typed { color: #2a9d8f; }
+        .target-word .current { color: #e76f51; text-decoration: underline; }
+
+        /* Finger Guide Hint */
+        .finger-guide { background: #001e1d; color: #ffb703; padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; border: 1px solid #ffb703; }
+
+        .streak-banner { font-size: 0.85rem; color: #fb8500; font-weight: bold; min-height: 20px; margin-bottom: 10px; }
+
+        /* On-Screen Virtual Keyboard */
+        .keyboard { display: flex; flex-direction: column; gap: 5px; background: #333; padding: 10px; border-radius: 12px; width: 100%; }
+        .key-row { display: flex; justify-content: center; gap: 4px; }
+        .key { background: #444; color: #fff; border-radius: 5px; padding: 8px 0; width: 38px; text-align: center; font-size: 0.85rem; font-weight: bold; }
+        .key.active { background: #ffb703; color: #000; font-weight: 900; }
+        .key.home-row { border-bottom: 2px solid #2a9d8f; }
+        .space-key { width: 180px; }
+
+        /* Shop Screen */
+        .shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; margin-bottom: 20px; }
+        .shop-item { background: #fff8f0; border: 2px solid #e0c9a6; border-radius: 12px; padding: 15px; text-align: center; position: relative; }
+        .shop-item.equipped { border-color: #2a9d8f; background: #e8f8f5; }
+        .shop-item .icon { font-size: 3rem; margin-bottom: 8px; }
+        .shop-item .title { font-weight: bold; font-size: 1rem; margin-bottom: 5px; }
+        .shop-item .cost { color: #fb8500; font-weight: bold; margin-bottom: 10px; font-size: 0.9rem; }
+        .btn-buy { background: #2a9d8f; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .badge-equipped { position: absolute; top: 8px; right: 8px; background: #2a9d8f; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: bold; display: none; }
+        .shop-item.equipped .badge-equipped { display: block; }
+
+        /* Result Modal Screen */
+        .result-card { background: #fff8f0; border: 3px solid #ffb703; border-radius: 15px; padding: 20px; width: 100%; max-width: 400px; text-align: center; }
+        .result-score { font-size: 2rem; color: #f2545b; font-weight: bold; margin: 10px 0; }
+        .result-stats { text-align: left; margin: 15px 0; font-size: 0.95rem; line-height: 1.8; color: #001e1d; }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <span id="player-title-display">👨‍🍳 新手小廚 Typing Chef</span>
+        <div class="currency-group">
+            <span>🪙 金幣: <span id="gold-display">100</span></span>
+            <span>⭐ 星星: <span id="star-display">5</span></span>
+        </div>
+        <button class="btn-nav" id="btn-home" onclick="goToMenu()">🏠 主選單</button>
+    </div>
+
+    <!-- Screen 1: Main Menu -->
+    <div id="screen-menu" class="screen active">
+        <div style="font-size:4rem; margin-bottom:10px;" id="main-avatar-display">👨‍🍳</div>
+        <h1 class="game-title">打字大廚：美食餐廳經營學</h1>
+        <p class="game-subtitle">出菜靠打字，輕鬆練習盲打好習慣！</p>
+        <div class="menu-buttons">
+            <button class="btn-main" onclick="goToMap()">🗺️ 餐廳地圖關卡</button>
+            <button class="btn-main" onclick="goToShop()" style="background:#2a9d8f; border-color:#264653; color:white;">🛍️ 廚師裝扮商店</button>
+        </div>
+    </div>
+
+    <!-- Screen 2: Map / Level Selection -->
+    <div id="screen-map" class="screen">
+        <div class="map-title">請選擇經營的餐廳關卡</div>
+        <div class="map-grid">
+            <div class="map-card unlocked" onclick="startLevel(1)">
+                <div class="icon">🍱</div>
+                <div class="name">1. 路邊小吃攤</div>
+                <div style="font-size:0.75rem; color:#8c7851; margin-top:3px;">三排按鍵與手指引導</div>
+                <div class="stars">⭐⭐⭐</div>
+            </div>
+            <div class="map-card unlocked" onclick="startLevel(2)">
+                <div class="icon">🥪</div>
+                <div class="name">2. 溫馨早餐店</div>
+                <div style="font-size:0.75rem; color:#8c7851; margin-top:3px;">基礎美食單字</div>
+                <div class="stars">⭐⭐☆</div>
+            </div>
+            <div class="map-card unlocked" onclick="startLevel(3)">
+                <div class="icon">☕</div>
+                <div class="name">3. 流行咖啡館</div>
+                <div style="font-size:0.75rem; color:#8c7851; margin-top:3px;">菜單與常用詞</div>
+                <div class="stars">⭐☆☆</div>
+            </div>
+            <div class="map-card locked">
+                <div class="icon">🔒</div>
+                <div class="name">4. 異國餐酒館</div>
+                <div style="font-size:0.75rem; color:#8c7851; margin-top:3px;">需 10 顆星星解鎖</div>
+                <div class="stars">☆☆☆</div>
+            </div>
+            <div class="map-card locked">
+                <div class="icon">🔒</div>
+                <div class="name">5. 星級高級餐廳</div>
+                <div style="font-size:0.75rem; color:#8c7851; margin-top:3px;">需 20 顆星星解鎖</div>
+                <div class="stars">☆☆☆</div>
+            </div>
+        </div>
+        <button class="btn-nav" style="background:#e0c9a6;" onclick="goToMenu()">⬅️ 返回主選單</button>
+    </div>
+
+    <!-- Screen 3: Gameplay -->
+    <div id="screen-game" class="screen">
+        <div class="game-header">
+            <div class="stat-item"><div class="stat-label">當前關卡</div><div class="stat-value" id="level-name">小吃攤</div></div>
+            <div class="stat-item"><div class="stat-label">剩餘時間</div><div class="stat-value" id="game-time">30s</div></div>
+            <div class="stat-item"><div class="stat-label">打字速度 (CPM)</div><div class="stat-value" id="game-cpm">0</div></div>
+            <div class="stat-item"><div class="stat-label">正確率</div><div class="stat-value" id="game-accuracy">100%</div></div>
+        </div>
+
+        <div class="customer-area">
+            <div class="customer-avatar" id="customer-avatar">👧</div>
+            <div class="order-bubble">
+                <div class="food-name" id="food-description">顧客點餐單</div>
+                <div class="target-word" id="target-word-display">APPLE</div>
+            </div>
+        </div>
+
+        <!-- Dynamic Finger Hint -->
+        <div class="finger-guide" id="finger-hint">👉 請使用【左手小指】按 Q 鍵</div>
+
+        <div class="streak-banner" id="streak-display">🔥 連續打對：0（滿 5 觸發狂歡模式！）</div>
+
+        <!-- Virtual Keyboard -->
+        <div class="keyboard">
+            <div class="key-row">
+                <div class="key" id="key-q">Q</div><div class="key" id="key-w">W</div><div class="key" id="key-e">E</div><div class="key" id="key-r">R</div><div class="key" id="key-t">T</div><div class="key" id="key-y">Y</div><div class="key" id="key-u">U</div><div class="key" id="key-i">I</div><div class="key" id="key-o">O</div><div class="key" id="key-p">P</div>
+            </div>
+            <div class="key-row">
+                <div class="key home-row" id="key-a">A</div><div class="key home-row" id="key-s">S</div><div class="key home-row" id="key-d">D</div><div class="key home-row" id="key-f">F</div><div class="key home-row" id="key-g">G</div><div class="key home-row" id="key-h">H</div><div class="key home-row" id="key-j">J</div><div class="key home-row" id="key-k">K</div><div class="key home-row" id="key-l">L</div>
+            </div>
+            <div class="key-row">
+                <div class="key" id="key-z">Z</div><div class="key" id="key-x">X</div><div class="key" id="key-c">C</div><div class="key" id="key-v">V</div><div class="key" id="key-b">B</div><div class="key" id="key-n">N</div><div class="key" id="key-m">M</div>
+            </div>
+            <div class="key-row">
+                <div class="key space-key" id="key-space">SPACE</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 4: Shop -->
+    <div id="screen-shop" class="screen">
+        <h2 style="margin-bottom:15px; color:#001e1d;">🛍️ 廚師裝扮商店</h2>
+        <div class="shop-grid">
+            <div class="shop-item" id="shop-item-1">
+                <span class="badge-equipped">已穿戴</span>
+                <div class="icon">👨‍🍳</div>
+                <div class="title">經典主廚</div>
+                <div class="cost">🪙 50 金幣</div>
+                <button class="btn-buy" id="btn-buy-1" onclick="buyItem(1, '👑 經典大廚', '👨‍🍳', 50, 0)">購買並穿戴</button>
+            </div>
+            <div class="shop-item" id="shop-item-2">
+                <span class="badge-equipped">已穿戴</span>
+                <div class="icon">🧁</div>
+                <div class="title">粉紅西點師</div>
+                <div class="cost">🪙 120 金幣</div>
+                <button class="btn-buy" id="btn-buy-2" onclick="buyItem(2, '🧁 粉紅西點師', '👩‍🍳', 120, 0)">購買並穿戴</button>
+            </div>
+            <div class="shop-item" id="shop-item-3">
+                <span class="badge-equipped">已穿戴</span>
+                <div class="icon">🧙‍♂️</div>
+                <div class="title">黃金傳奇廚皇</div>
+                <div class="cost">⭐ 5 顆星星</div>
+                <button class="btn-buy" id="btn-buy-3" onclick="buyItem(3, '👑 黃金傳奇廚皇', '🧙‍♂️', 0, 5)">成就解鎖穿戴</button>
+            </div>
+        </div>
+        <button class="btn-nav" style="background:#e0c9a6;" onclick="goToMenu()">⬅️ 返回主選單</button>
+    </div>
+
+    <!-- Screen 5: Result Modal -->
+    <div id="screen-result" class="screen">
+        <div class="result-card">
+            <h2>🎉 今日營業結算</h2>
+            <div class="result-score" id="result-score">+50 金幣</div>
+            <div class="result-stats">
+                <div>⏱️ 平均打字速度：<b id="result-cpm">0</b> CPM</div>
+                <div>🎯 最終打字正確率：<b id="result-acc">100%</b></div>
+                <div>🥗 成功出菜數量：<b id="result-dishes">0</b> 道菜</div>
+            </div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button class="btn-main" onclick="startLevel(currentLevelId)">🔄 再試一次</button>
+                <button class="btn-main" style="background:#2a9d8f; border-color:#264653; color:white;" onclick="nextLevel()">前往下一關 ➔</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Navigation Functions
+    function goToMenu() { hideAllScreens(); document.getElementById('screen-menu').classList.add('active'); }
+    function goToMap() { hideAllScreens(); document.getElementById('screen-map').classList.add('active'); }
+    function goToShop() { hideAllScreens(); document.getElementById('screen-shop').classList.add('active'); }
+    
+    function hideAllScreens() {
+        if(timer) clearInterval(timer);
+        const screens = document.getElementsByClassName('screen');
+        for(let i = 0; i < screens.length; i++) {
+            screens[i].classList.remove('active');
+        }
+        updateCurrencyDisplay();
+    }
+
+    // Game State
+    let gold = 100;
+    let stars = 5;
+    let currentLevelId = 1;
+    let timer = null;
+    let timeLeft = 30;
+    let totalTyped = 0;
+    let correctTyped = 0;
+    let streak = 0;
+    let dishesServed = 0;
+    let equippedId = null;
+    
+    let currentWord = "";
+    let typedIndex = 0;
+
+    const customers = ["👦", "👧", "👨", "👩", "👵", "👴", "🧔"];
+
+    const fingerMap = {
+        'Q': '左手小指', 'A': '左手小指', 'Z': '左手小指',
+        'W': '左手無名指', 'S': '左手無名指', 'X': '左手無名指',
+        'E': '左手中指', 'D': '左手中指', 'C': '左手中指',
+        'R': '左手食指', 'F': '左手食指', 'V': '左手食指', 'T': '左手食指', 'G': '左手食指', 'B': '左手食指',
+        'Y': '右手食指', 'H': '右手食指', 'N': '右手食指', 'U': '右手食指', 'J': '右手食指', 'M': '右手食指',
+        'I': '右手中指', 'K': '右手中指',
+        'O': '右手無名指', 'L': '右手無名指',
+        'P': '右手小指'
+    };
+    
+    const wordBank = {
+        1: [
+            { word: "QWERTY", label: "上排按鍵指法練習" },
+            { word: "ASDFGH", label: "中排基準鍵指法練習" },
+            { word: "ZXCVBN", label: "下排按鍵指法練習" },
+            { word: "PACK", label: "三排綜合出菜" },
+            { word: "JUMPY", label: "三排綜合出菜" }
+        ],
+        2: [
+            { word: "APPLE", label: "紅蘋果" },
+            { word: "BREAD", label: "香烤麵包" },
+            { word: "MILK", label: "鮮牛奶" },
+            { word: "CHEESE", label: "起司塊" },
+            { word: "SOUP", label: "熱湯" }
+        ],
+        3: [
+            { word: "COFFEE", label: "美式咖啡" },
+            { word: "LATTE", label: "拿鐵咖啡" },
+            { word: "PIZZA", label: "義式披薩" },
+            { word: "PASTA", label: "義大利麵" },
+            { word: "BURGER", label: "漢堡" }
+        ]
+    };
+
+    function updateCurrencyDisplay() {
+        document.getElementById('gold-display').innerText = gold;
+        document.getElementById('star-display').innerText = stars;
+    }
+
+    function startLevel(levelId) {
+        currentLevelId = levelId;
+        timeLeft = 30;
+        totalTyped = 0;
+        correctTyped = 0;
+        streak = 0;
+        dishesServed = 0;
+        
+        document.getElementById('level-name').innerText = "關卡 " + levelId;
+        hideAllScreens();
+        document.getElementById('screen-game').classList.add('active');
+        
+        nextWord();
+        
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('game-time').innerText = timeLeft + "s";
+            if(timeLeft <= 0) {
+                endGame();
+            }
+        }, 1000);
+    }
+
+    function nextWord() {
+        const bank = wordBank[currentLevelId] || wordBank[1];
+        const item = bank[Math.floor(Math.random() * bank.length)];
+        currentWord = item.word;
+        typedIndex = 0;
+        
+        document.getElementById('food-description').innerText = item.label;
+        document.getElementById('customer-avatar').innerText = customers[Math.floor(Math.random() * customers.length)];
+        updateWordDisplay();
+    }
+
+    function updateWordDisplay() {
+        const typedPart = `<span class="typed">${currentWord.substring(0, typedIndex)}</span>`;
+        const currentPart = typedIndex < currentWord.length ? `<span class="current">${currentWord.charAt(typedIndex)}</span>` : '';
+        const unTypedPart = currentWord.substring(typedIndex + 1);
+        
+        document.getElementById('target-word-display').innerHTML = typedPart + currentPart + unTypedPart;
+        
+        if(typedIndex < currentWord.length) {
+            const char = currentWord.charAt(typedIndex);
+            highlightKey(char);
+            
+            const finger = fingerMap[char] || '雙手大拇指';
+            document.getElementById('finger-hint').innerText = `👉 請使用【${finger}】按下 ${char} 鍵`;
+        }
+    }
+
+    function highlightKey(char) {
+        const keys = document.getElementsByClassName('key');
+        for(let i = 0; i < keys.length; i++) {
+            keys[i].classList.remove('active');
+        }
+        const keyEl = document.getElementById('key-' + char.toLowerCase());
+        if(keyEl) keyEl.classList.add('active');
+    }
+
+    window.addEventListener('keydown', (e) => {
+        const activeScreen = document.querySelector('.screen.active');
+        if(!activeScreen || activeScreen.id !== 'screen-game') return;
+
+        const pressedKey = e.key.toUpperCase();
+        totalTyped++;
+
+        if(pressedKey === currentWord.charAt(typedIndex)) {
+            correctTyped++;
+            typedIndex++;
+            streak++;
+            document.getElementById('streak-display').innerText = `🔥 連續打對：${streak}（滿 5 觸發狂歡模式！）`;
+
+            if(typedIndex >= currentWord.length) {
+                dishesServed++;
+                gold += 10;
+                updateCurrencyDisplay();
+                nextWord();
+            } else {
+                updateWordDisplay();
+            }
+        } else {
+            streak = 0;
+            document.getElementById('streak-display').innerText = `❌ 打錯了！提示指法在上圖，加油！`;
+        }
+
+        const accuracy = totalTyped > 0 ? Math.round((correctTyped / totalTyped) * 100) : 100;
+        const cpm = Math.round((correctTyped / (30 - timeLeft || 1)) * 60);
+        document.getElementById('game-accuracy').innerText = accuracy + "%";
+        document.getElementById('game-cpm').innerText = cpm;
+    });
+
+    function endGame() {
+        clearInterval(timer);
+        const earnedGold = dishesServed * 15;
+        gold += earnedGold;
+        stars += 1;
+        
+        document.getElementById('result-score').innerText = `+${earnedGold} 金幣!`;
+        document.getElementById('result-cpm').innerText = document.getElementById('game-cpm').innerText;
+        document.getElementById('result-acc').innerText = document.getElementById('game-accuracy').innerText;
+        document.getElementById('result-dishes').innerText = dishesServed;
+
+        hideAllScreens();
+        document.getElementById('screen-result').classList.add('active');
+    }
+
+    function nextLevel() {
+        if(currentLevelId < 3) {
+            startLevel(currentLevelId + 1);
+        } else {
+            startLevel(1);
+        }
+    }
+
+    function buyItem(id, title, avatar, costGold, reqStars) {
+        if(equippedId === id) return;
+
+        if(reqStars > 0 && stars < reqStars) {
+            alert(`⭐ 星星數量不足！需要 ${reqStars} 顆星星解鎖！`);
+            return;
+        }
+
+        if(gold >= costGold) {
+            if(costGold > 0 && equippedId !== id) gold -= costGold;
+            equippedId = id;
+
+            document.getElementById('player-title-display').innerText = title + " Typing Chef";
+            document.getElementById('main-avatar-display').innerText = avatar;
+
+            const items = document.getElementsByClassName('shop-item');
+            for(let i = 0; i < items.length; i++) {
+                items[i].classList.remove('equipped');
+            }
+            document.getElementById('shop-item-' + id).classList.add('equipped');
+
+            updateCurrencyDisplay();
+            alert(`🎉 穿戴成功！稱號與頭像已更新為：${title}`);
+        } else {
+            alert("🪙 金幣不足喔！多練打字出菜賺金幣吧！");
+        }
+    }
+
+    updateCurrencyDisplay();
+</script>
+
+</body>
+</html>
